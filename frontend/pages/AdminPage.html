@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECObuddy Admin | Reports</title>
+
+<!-- Google Fonts & Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- Bootstrap 5 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css">
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
+
+<style>
+:root { --primary:#4361ee; --dark:#1b263b; --gray:#6c757d; }
+body { font-family:'Poppins',sans-serif; background:#f5f7fa; color:var(--dark); overflow-x:hidden; }
+
+/* Sidebar */
+.sidebar { background: linear-gradient(180deg,var(--dark),#0d1b2a); color:white; height:100vh; width:280px; position:fixed; }
+.sidebar-brand { padding:1.5rem; border-bottom:1px solid rgba(255,255,255,0.1); }
+.sidebar-brand img { height:40px; }
+.nav-link { color:rgba(255,255,255,0.7); padding:0.75rem 1.5rem; margin:0.25rem 1rem; border-radius:8px; display:flex; align-items:center; }
+.nav-link i { width:24px; margin-right:10px; }
+.nav-link:hover, .nav-link.active { background: rgba(67,97,238,0.2); color:white; }
+
+/* Main Content */
+.main-content { margin-left:280px; padding:2rem; }
+.header h1 { font-weight:600; }
+.stats-card { border-radius:12px; padding:1.5rem; margin-bottom:1.5rem; box-shadow:0 10px 20px rgba(0,0,0,0.05); }
+.status-badge { padding:0.35rem 0.75rem; border-radius:50px; font-size:0.75rem; font-weight:600; }
+.status-pending { background:#fff3cd; color:#856404; }
+.status-in-progress { background:#cce5ff; color:#004085; }
+.status-resolved { background:#d4edda; color:#155724; }
+#reportsMap { height:400px; width:100%; border-radius:12px; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+    <div class="sidebar-brand d-flex align-items-center">
+        <img src="./logo.png" alt="ECObuddy Logo">
+        <h4 class="ms-2">ECObuddy</h4>
+    </div>
+    <ul class="nav flex-column mt-3">
+        <li class="nav-item"><a class="nav-link active" href="#"><i class="fas fa-trash-alt"></i> Dumping Reports</a></li>
+    </ul>
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+    <div class="header mb-4">
+        <h1>Illegal Dumping Reports</h1>
+        <p class="text-muted">Monitor all reported cases</p>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="row mb-4">
+        <div class="col-md-4"><div class="stats-card bg-white text-center"><h3 id="totalReports">0</h3><p>Total Reports</p></div></div>
+        <div class="col-md-4"><div class="stats-card bg-white text-center"><h3 id="pendingReports">0</h3><p>Pending</p></div></div>
+        <div class="col-md-4"><div class="stats-card bg-white text-center"><h3 id="resolvedReports">0</h3><p>Resolved</p></div></div>
+    </div>
+
+    <!-- Map -->
+    <div class="mb-4"><div id="reportsMap"></div></div>
+
+    <!-- Table -->
+    <div class="card">
+        <div class="card-body">
+            <table id="reportsTable" class="table table-hover" style="width:100%">
+                <thead>
+                    <tr><th>ID</th><th>Location</th><th>Reporter</th><th>Date</th><th>Status</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<!-- Report Details Modal -->
+<div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="reportModalLabel">Report Details</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Report Info -->
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <p><strong>Reporter Name:</strong> <span id="modalReporter"></span></p>
+            <p><strong>Contact:</strong> <span id="modalContact"></span></p>
+            <p><strong>Location:</strong> <span id="modalLocation"></span></p>
+            <p><strong>Latitude:</strong> <span id="modalLatitude"></span></p>
+            <p><strong>Longitude:</strong> <span id="modalLongitude"></span></p>
+            <p><strong>Date Reported:</strong> <span id="modalDate"></span></p>
+          </div>
+          <div class="col-md-6 text-end">
+            <p><strong>Status:</strong> <span id="modalStatus" class="status-badge fs-6"></span></p>
+          </div>
+        </div>
+
+        <hr>
+        <p><strong>Description:</strong></p>
+        <p id="modalDescription"></p>
+
+        <hr>
+        <p><strong>Photos:</strong></p>
+        <div id="modalPhotosCarousel" class="carousel slide" data-bs-ride="carousel">
+          <div class="carousel-inner" id="carouselInner"></div>
+          <button class="carousel-control-prev" type="button" data-bs-target="#modalPhotosCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+          </button>
+          <button class="carousel-control-next" type="button" data-bs-target="#modalPhotosCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+          </button>
+        </div>
+
+        <hr>
+        <!-- Admin Actions -->
+        <div class="row">
+          <div class="col-md-6">
+            <label for="statusSelect" class="form-label"><strong>Update Status</strong></label>
+            <select id="statusSelect" class="form-select">
+              <option value="Pending">Pending</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Resolved">Resolved</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label for="adminRemarks" class="form-label"><strong>Admin Remarks</strong></label>
+            <textarea id="adminRemarks" class="form-control" rows="2" placeholder="Add remarks here..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="saveChanges" type="button" class="btn btn-success">Save Changes</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Bootstrap & JS -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+
+<script>
+$(document).ready(function() {
+    const table = $('#reportsTable').DataTable({ order:[[3,'desc']] });
+    const map = L.map('reportsMap').setView([18.5204, 73.8567], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenStreetMap contributors' }).addTo(map);
+
+    // Fetch reports from backend
+    $.get('http://localhost:5000/api/reports', function(reports) {
+        table.clear();
+        let total=0, pending=0, resolved=0;
+        reports.forEach(report => {
+            total++;
+            if(report.status==="Pending") pending++;
+            if(report.status==="Resolved") resolved++;
+
+            const statusClass = report.status.toLowerCase().replace(' ','-');
+
+            table.row.add([
+                `#REP-${report._id.slice(-5)}`,
+                report.location,
+                report.reporterName || "Anonymous",
+                new Date(report.dateReported).toLocaleDateString(),
+                `<span class="status-badge status-${statusClass}">${report.status}</span>`
+            ]).draw(false);
+
+            if(report.latitude && report.longitude) {
+                let color = statusClass==="pending"?"orange":statusClass==="in-progress"?"blue":"green";
+                L.marker([report.latitude,report.longitude], {
+                    icon:L.icon({
+                        iconUrl:`https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`,
+                        shadowUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                        iconSize:[25,41], iconAnchor:[12,41], popupAnchor:[1,-34], shadowSize:[41,41]
+                    })
+                }).addTo(map).bindPopup(`<b>Report</b><br>${report.location}<br>Status: ${report.status}`);
+            }
+        });
+        $('#totalReports').text(total);
+        $('#pendingReports').text(pending);
+        $('#resolvedReports').text(resolved);
+    });
+});
+let currentReportId = null;
+
+$('#reportsTable tbody').on('click', 'tr', function() {
+    const rowData = table.row(this).data();
+    const reportId = rowData[0].replace("#REP-", "");
+    currentReportId = reportId;
+
+    $.get(`http://localhost:5000/api/reports/${reportId}`, function(report) {
+        // Fill all user details
+        $('#modalReporter').text(report.reporterName || "Anonymous");
+        $('#modalContact').text(report.reporterContact || "-");
+        $('#modalLocation').text(report.location || "-");
+        $('#modalLatitude').text(report.latitude || "-");
+        $('#modalLongitude').text(report.longitude || "-");
+        $('#modalDate').text(new Date(report.dateReported).toLocaleString());
+        $('#modalDescription').text(report.description || "No description provided");
+
+        // Status badge
+        const statusClass = report.status.toLowerCase().replace(' ', '-');
+        $('#modalStatus').text(report.status)
+                         .removeClass('status-pending status-in-progress status-resolved')
+                         .addClass(`status-${statusClass}`);
+
+        // Set admin action fields
+        $('#statusSelect').val(report.status);
+        $('#adminRemarks').val(report.adminRemarks || "");
+
+        // Photos carousel
+        const carouselInner = $('#carouselInner');
+        carouselInner.empty();
+        if(report.photos && report.photos.length > 0){
+            report.photos.forEach((photo, index) => {
+                carouselInner.append(`
+                    <div class="carousel-item ${index === 0 ? 'active' : ''}">
+                        <img src="http://localhost:5000/${photo}" class="d-block w-100 rounded" style="max-height:500px; object-fit:cover;">
+                    </div>
+                `);
+            });
+        } else {
+            carouselInner.append(`
+                <div class="carousel-item active text-center p-5">
+                    <p>No photos uploaded</p>
+                </div>
+            `);
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('reportModal'));
+        modal.show();
+    });
+});
+
+// Save changes
+$('#saveChanges').on('click', function() {
+    const updatedStatus = $('#statusSelect').val();
+    const updatedRemarks = $('#adminRemarks').val();
+
+    $.ajax({
+        url: `http://localhost:5000/api/reports/${currentReportId}`,
+        method: 'PUT',
+        contentType: 'application/json',
+        data: JSON.stringify({ status: updatedStatus, adminRemarks: updatedRemarks }),
+        success: function(data) {
+            alert('Report updated successfully!');
+            $('#reportModal').modal('hide');
+            location.reload(); // refresh stats and table
+        },
+        error: function(err) {
+            alert('Error updating report');
+            console.error(err);
+        }
+    });
+});
+
+</script>
+</body>
+</html>

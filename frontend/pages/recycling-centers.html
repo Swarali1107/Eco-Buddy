@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recycling Centers Locator | ECObuddy</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3a0ca3;
+            --accent-color: #f72585;
+            --light-bg: #f8f9fa;
+            --dark-color: #212529;
+            --card-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--light-bg);
+            color: var(--dark-color);
+            overflow-x: hidden;
+        }
+        
+        .navbar {
+            background-color: white !important;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+            padding: 1rem 0;
+            transition: var(--transition);
+        }
+        
+        .navbar.scrolled {
+            padding: 0.5rem 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            background: linear-gradient(45deg, var(--primary-color), var(--accent-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .nav-link {
+            font-weight: 500;
+            margin: 0 0.5rem;
+            position: relative;
+        }
+        
+        .nav-link:after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: 0;
+            left: 0;
+            background-color: var(--primary-color);
+            transition: var(--transition);
+        }
+        
+        .nav-link:hover:after {
+            width: 100%;
+        }
+        
+        .container {
+            margin-top: 30px;
+            max-width: 1400px;
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 20px;
+            padding: 3rem 2rem;
+            margin-bottom: 3rem;
+            box-shadow: var(--card-shadow);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero-section:before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(67,97,238,0.1) 0%, rgba(0,0,0,0) 70%);
+            z-index: 0;
+        }
+        
+        .map-container {
+            height: 500px;
+            width: 100%;
+            border-radius: 20px;
+            overflow: hidden;
+            margin-top: 20px;
+            box-shadow: var(--card-shadow);
+            border: none;
+            transition: var(--transition);
+        }
+        
+        .map-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.15);
+        }
+        
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        
+        .card {
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+            border: none;
+            margin-bottom: 2rem;
+            transition: var(--transition);
+            background-color: white;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.15);
+        }
+        
+        .card-header {
+            background-color: white;
+            color: var(--primary-color);
+            border-radius: 20px 20px 0 0 !important;
+            font-weight: 600;
+            font-size: 1.2rem;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            padding: 1.5rem;
+        }
+        
+        .list-group-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            border-left: none;
+            border-right: none;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            transition: var(--transition);
+        }
+        
+        .list-group-item:first-child {
+            border-top: none;
+        }
+        
+        .list-group-item:last-child {
+            border-bottom: none;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border: none;
+            padding: 0.75rem 1.75rem;
+            font-weight: 600;
+            border-radius: 12px;
+            transition: var(--transition);
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(67, 97, 238, 0.4);
+        }
+        
+        .btn-outline-primary {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+            border-width: 2px;
+            font-weight: 600;
+            border-radius: 12px;
+            padding: 0.75rem 1.75rem;
+            transition: var(--transition);
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(67, 97, 238, 0.3);
+        }
+        
+        .search-box {
+            position: relative;
+            max-width: 700px;
+            margin: 0 auto;
+            z-index: 10;
+        }
+        
+        .form-control {
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            border: 2px solid rgba(0,0,0,0.1);
+            font-size: 1.1rem;
+            transition: var(--transition);
+        }
+        
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.15);
+        }
+        
+        .autocomplete-list {
+            position: absolute;
+            background: white;
+            border-radius: 0 0 12px 12px;
+            width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            top: 100%;
+            left: 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 2px solid rgba(0,0,0,0.1);
+            border-top: none;
+            display: none;
+        }
+        
+        .suggestion-item {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+        }
+        
+        .suggestion-item:hover {
+            background: #f8f9fa;
+            transform: translateX(5px);
+        }
+        
+        .suggestion-item i {
+            margin-right: 10px;
+            color: var(--primary-color);
+        }
+        
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+        
+        .result-item {
+            transition: var(--transition);
+        }
+        
+        .result-item:hover {
+            background-color: #f8f9fa;
+            transform: translateX(5px);
+        }
+        
+        .location-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 1rem;
+        }
+        
+        .no-results {
+            padding: 3rem;
+            text-align: center;
+            color: #666;
+        }
+        
+        .loading-spinner {
+            display: none;
+            width: 3rem;
+            height: 3rem;
+            border: 0.35em solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: spinner 0.75s linear infinite;
+            margin: 2rem auto;
+            color: var(--primary-color);
+        }
+        
+        @keyframes spinner {
+            to { transform: rotate(360deg); }
+        }
+        
+        footer {
+            background-color: white;
+            color: var(--dark-color);
+            padding: 3rem 0;
+            margin-top: 5rem;
+            box-shadow: 0 -5px 30px rgba(0, 0, 0, 0.05);
+        }
+        
+        .attribution {
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+        
+        /* Pulse animation for current location button */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(67, 97, 238, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(67, 97, 238, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(67, 97, 238, 0); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        /* Floating animation for hero elements */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        .floating {
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary-color);
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
+            .hero-section {
+                padding: 2rem 1rem;
+            }
+            
+            .map-container {
+                height: 400px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .navbar-brand {
+                font-size: 1.3rem;
+            }
+            
+            .hero-section {
+                margin-bottom: 2rem;
+                border-radius: 15px;
+            }
+            
+            .card-header {
+                padding: 1.25rem;
+            }
+            
+            .list-group-item {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg fixed-top">
+        <div class="container">
+            <a class="navbar-brand animate__animated animate__fadeIn" href="index.html">
+                <i class="bi bi-recycle me-2"></i>ECObuddy
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-house-door me-1"></i> Home</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="#"><i class="bi bi-trash3 me-1"></i> Recycling Centers</a></li>
+                    <li class="nav-item"><a class="nav-link" href="index.html#services"><i class="bi bi-gear me-1"></i> Services</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="container" style="margin-top: 100px;">
+        <div class="hero-section text-center animate__animated animate__fadeIn">
+            <div class="floating">
+                <h1 class="display-5 fw-bold mb-4"><i class="bi bi-recycle me-2"></i>Find Nearby Recycling Centers</h1>
+                <p class="lead mb-5">Discover the closest facilities to responsibly dispose of your waste and help protect our planet</p>
+            </div>
+            
+            <!-- Search Section -->
+            <div class="row justify-content-center mt-4">
+                <div class="col-lg-8">
+                    <div class="search-box">
+                        <div class="input-group mb-3 animate__animated animate__fadeInUp animate__delay-1s">
+                            <input type="text" id="locationInput" class="form-control" placeholder="Search for a city or address (e.g., Mumbai, Bangalore)" oninput="autocompleteLocation()" autocomplete="off">
+                            <button class="btn btn-primary" type="button" onclick="searchByManualInput()">
+                                <i class="bi bi-search me-1"></i> Search
+                            </button>
+                        </div>
+                        <div id="suggestions" class="autocomplete-list"></div>
+                    </div>
+                    
+                    <button class="btn btn-outline-primary mt-3 location-btn pulse animate__animated animate__fadeInUp animate__delay-2s" onclick="searchByCurrentLocation()">
+                        <i class="bi bi-geo-alt-fill"></i> Use My Current Location
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container animate__animated animate__fadeIn animate__delay-1s">
+        <div class="row">
+            <!-- Map Section -->
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header d-flex align-items-center">
+                        <i class="bi bi-map me-2"></i> Interactive Map
+                        <div id="mapLoading" class="spinner-border spinner-border-sm text-primary ms-auto" role="status" style="display: none;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="map-container">
+                            <div id="map"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Results Section -->
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header d-flex align-items-center">
+                        <i class="bi bi-list-stars me-2"></i> Nearby Facilities
+                        <span id="resultsCount" class="badge bg-primary ms-auto">0</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="loadingSpinner" class="loading-spinner my-4"></div>
+                        <div class="list-group list-group-flush" id="resultsList">
+                            <div class="list-group-item text-muted text-center py-5 animate__animated animate__fadeIn">
+                                <i class="bi bi-compass display-6 mb-3" style="color: #dee2e6;"></i>
+                                <h5>Search for locations</h5>
+                                <p class="small">Enter a city or use your current location to find recycling centers</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="animate__animated animate__fadeIn animate__delay-2s">
+        <div class="container text-center">
+            <div class="mb-4">
+                <span class="navbar-brand mb-2 d-inline-block">
+                    <i class="bi bi-recycle me-2"></i>ECObuddy
+                </span>
+                <p class="mb-4">Making sustainable living easier for everyone</p>
+                <div class="d-flex justify-content-center gap-3 mb-4">
+                    <a href="#" class="text-decoration-none"><i class="bi bi-facebook"></i></a>
+                    <a href="#" class="text-decoration-none"><i class="bi bi-twitter"></i></a>
+                    <a href="#" class="text-decoration-none"><i class="bi bi-instagram"></i></a>
+                    <a href="#" class="text-decoration-none"><i class="bi bi-linkedin"></i></a>
+                </div>
+            </div>
+            <p class="attribution mb-0">© 2023 ECObuddy. Data provided by OpenStreetMap and Overpass API.</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <script>
+        // Initialize map with better default view
+        let map = L.map('map').setView([19.076, 72.8777], 13);
+        
+        // Add OpenStreetMap layer with a more subtle style
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 18,
+        }).addTo(map);
+        
+        // Add custom marker icons
+        const recyclingIcon = L.icon({
+            iconUrl: 'https://cdn.jsdelivr.net/gh/pointhi/leaflet-color-markers/img/marker-icon-2x-violet.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+        
+        const wasteIcon = L.icon({
+            iconUrl: 'https://cdn.jsdelivr.net/gh/pointhi/leaflet-color-markers/img/marker-icon-2x-gold.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', function() {
+            if (window.scrollY > 50) {
+                document.querySelector('.navbar').classList.add('scrolled');
+            } else {
+                document.querySelector('.navbar').classList.remove('scrolled');
+            }
+        });
+
+        function searchByCurrentLocation() {
+            if (!navigator.geolocation) {
+                showAlert("Geolocation is not supported by your browser.", "warning");
+                return;
+            }
+            
+            document.getElementById("loadingSpinner").style.display = "block";
+            document.getElementById("mapLoading").style.display = "block";
+            document.getElementById("resultsList").innerHTML = "";
+            
+            // Add loading state to button
+            const btn = document.querySelector('.location-btn');
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Locating...';
+            btn.classList.remove('pulse');
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    
+                    // Add animation to map movement
+                    map.flyTo([lat, lon], 14, {
+                        duration: 1,
+                        easeLinearity: 0.25
+                    });
+                    
+                    fetchRecyclingCenters(lat, lon);
+                    
+                    // Reverse geocode to show address in input
+                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.display_name) {
+                                const shortName = data.display_name.split(',')[0] + ', ' + data.display_name.split(',')[1];
+                                document.getElementById("locationInput").value = shortName;
+                            }
+                        })
+                        .finally(() => {
+                            btn.innerHTML = '<i class="bi bi-geo-alt-fill"></i> Use My Current Location';
+                            btn.classList.add('pulse');
+                        });
+                },
+                (error) => {
+                    console.error("Error getting location:", error);
+                    document.getElementById("loadingSpinner").style.display = "none";
+                    document.getElementById("mapLoading").style.display = "none";
+                    showAlert("Unable to retrieve your location. Please enter a city manually.", "danger");
+                    btn.innerHTML = '<i class="bi bi-geo-alt-fill"></i> Use My Current Location';
+                    btn.classList.add('pulse');
+                }
+            );
+        }
+
+        function searchByManualInput() {
+            const location = document.getElementById("locationInput").value.trim();
+            if (!location) {
+                showAlert("Please enter a location.", "warning");
+                return;
+            }
+            
+            document.getElementById("loadingSpinner").style.display = "block";
+            document.getElementById("mapLoading").style.display = "block";
+            document.getElementById("resultsList").innerHTML = "";
+            
+            // Add loading state to button
+            const btn = document.querySelector('.btn-primary');
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Searching...';
+            
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        const lat = data[0].lat;
+                        const lon = data[0].lon;
+                        
+                        // Animate map movement
+                        map.flyTo([lat, lon], 14, {
+                            duration: 1,
+                            easeLinearity: 0.25
+                        });
+                        
+                        fetchRecyclingCenters(lat, lon);
+                    } else {
+                        document.getElementById("loadingSpinner").style.display = "none";
+                        document.getElementById("mapLoading").style.display = "none";
+                        showResultsMessage("Location not found. Please try a different search term.", "bi-geo-alt");
+                    }
+                })
+                .catch(error => {
+                    console.error("Error geocoding location:", error);
+                    document.getElementById("loadingSpinner").style.display = "none";
+                    document.getElementById("mapLoading").style.display = "none";
+                    showResultsMessage("Error searching location. Please try again.", "bi-exclamation-triangle");
+                })
+                .finally(() => {
+                    btn.innerHTML = '<i class="bi bi-search me-1"></i> Search';
+                });
+        }
+
+        function fetchRecyclingCenters(lat, lon) {
+            const overpassQuery = `
+                [out:json];
+                (
+                    node["amenity"="recycling"](around:10000, ${lat}, ${lon});
+                    node["amenity"="waste_disposal"](around:10000, ${lat}, ${lon});
+                    node["amenity"="waste_transfer_station"](around:10000, ${lat}, ${lon});
+                    node["amenity"="waste_collection_point"](around:10000, ${lat}, ${lon});
+                    node["landuse"="landfill"](around:10000, ${lat}, ${lon});
+                    node["recycling_type"="container"](around:10000, ${lat}, ${lon});
+                    node["recycling_type"="centre"](around:10000, ${lat}, ${lon});
+                    node["scrap_yard"="yes"](around:10000, ${lat}, ${lon});
+                );
+                out body;
+            `;
+
+            const overpassURL = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`;
+
+            fetch(overpassURL)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("loadingSpinner").style.display = "none";
+                    document.getElementById("mapLoading").style.display = "none";
+                    document.getElementById("resultsList").innerHTML = "";
+                    
+                    // Clear existing markers
+                    map.eachLayer(layer => {
+                        if (layer instanceof L.Marker) {
+                            map.removeLayer(layer);
+                        }
+                    });
+
+                    if (data.elements.length === 0) {
+                        showResultsMessage("No recycling centers found in this area. Try a larger city or different location.", "bi-binoculars");
+                        document.getElementById("resultsCount").textContent = "0";
+                        return;
+                    }
+
+                    // Update results count
+                    document.getElementById("resultsCount").textContent = data.elements.length;
+                    document.getElementById("resultsCount").classList.add("animate__animated", "animate__bounceIn");
+
+                    // Remove animation class after it completes
+                    setTimeout(() => {
+                        document.getElementById("resultsCount").classList.remove("animate__animated", "animate__bounceIn");
+                    }, 1000);
+
+                    // Cluster markers for better performance
+                    const markers = L.layerGroup().addTo(map);
+
+                    data.elements.forEach((place, index) => {
+                        const placeLat = place.lat;
+                        const placeLon = place.lon;
+                        const name = place.tags.name || "Unnamed Location";
+                        const type = place.tags.amenity || place.tags.landuse || "Recycling Facility";
+                        const address = place.tags["addr:street"] || place.tags["addr:full"] || "Address not available";
+                        
+                        // Choose icon based on type
+                        const icon = type.includes("recycling") ? recyclingIcon : wasteIcon;
+                        
+                        // Add marker to map with animation
+                        setTimeout(() => {
+                            const marker = L.marker([placeLat, placeLon], {icon: icon})
+                                .addTo(markers)
+                                .bindPopup(`
+                                    <b>${name}</b><br>
+                                    <small class="text-muted">${type.replace(/_/g, " ")}</small><br>
+                                    <small>${address}</small>
+                                `);
+                            
+                            // Add slight animation to markers
+                            marker.getElement().classList.add("animate__animated", "animate__fadeInUp");
+                            marker.getElement().style.setProperty('--animate-duration', '0.5s');
+                            marker.getElement().style.setProperty('--animate-delay', `${index * 0.1}s`);
+                        }, 0);
+
+                        // Add to results list with animation
+                        setTimeout(() => {
+                            const listItem = document.createElement("div");
+                            listItem.className = "list-group-item result-item animate__animated animate__fadeIn";
+                            listItem.style.setProperty('--animate-duration', '0.5s');
+                            listItem.style.setProperty('--animate-delay', `${index * 0.1}s`);
+                            listItem.innerHTML = `
+                                <div class="d-flex flex-column">
+                                    <strong>${name}</strong>
+                                    <small class="text-muted">${type.replace(/_/g, " ")}</small>
+                                    <small class="text-truncate" style="max-width: 200px;">${address}</small>
+                                </div>
+                                <a href="https://www.google.com/maps?q=${placeLat},${placeLon}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-arrow-up-right"></i>
+                                </a>
+                            `;
+                            document.getElementById("resultsList").appendChild(listItem);
+                        }, 0);
+                    });
+                })
+                .catch(error => {
+                    console.error("Error fetching recycling centers:", error);
+                    document.getElementById("loadingSpinner").style.display = "none";
+                    document.getElementById("mapLoading").style.display = "none";
+                    showResultsMessage("Error loading data. Please try again later.", "bi-exclamation-octagon");
+                    document.getElementById("resultsCount").textContent = "0";
+                });
+        }
+        
+        function autocompleteLocation() {
+            let input = document.getElementById("locationInput").value.trim();
+            let suggestionsBox = document.getElementById("suggestions");
+            
+            if (input.length < 3) {
+                suggestionsBox.style.display = "none";
+                return;
+            }
+
+            // Show loading in suggestions
+            suggestionsBox.innerHTML = `
+                <div class="suggestion-item text-muted">
+                    <i class="bi bi-search"></i> Searching for "${input}"...
+                </div>
+            `;
+            suggestionsBox.style.display = "block";
+            
+            // Debounce the API calls
+            clearTimeout(window.autocompleteTimeout);
+            window.autocompleteTimeout = setTimeout(() => {
+                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}&limit=5`)
+                    .then(response => response.json())
+                    .then(data => {
+                        suggestionsBox.innerHTML = "";
+                        
+                        if (data.length === 0) {
+                            suggestionsBox.innerHTML = `
+                                <div class="suggestion-item text-muted">
+                                    <i class="bi bi-exclamation-circle"></i> No results found
+                                </div>
+                            `;
+                            return;
+                        }
+                        
+                        data.forEach((place, index) => {
+                            let div = document.createElement("div");
+                            div.className = "suggestion-item";
+                            div.innerHTML = `
+                                <i class="bi bi-geo-alt"></i>
+                                <div>
+                                    <div>${place.display_name.split(',')[0]}</div>
+                                    <small class="text-muted">${place.display_name.split(',').slice(1, 3).join(',')}</small>
+                                </div>
+                            `;
+                            div.onclick = function() {
+                                document.getElementById("locationInput").value = place.display_name;
+                                suggestionsBox.style.display = "none";
+                                // Trigger search automatically when selecting a suggestion
+                                searchByManualInput();
+                            };
+                            suggestionsBox.appendChild(div);
+                        });
+                    })
+                    .catch(error => {
+                        console.error("Error fetching suggestions:", error);
+                        suggestionsBox.innerHTML = `
+                            <div class="suggestion-item text-muted">
+                                <i class="bi bi-exclamation-triangle"></i> Error loading suggestions
+                            </div>
+                        `;
+                    });
+            }, 300);
+        }
+        
+        // Helper function to show messages in results
+        function showResultsMessage(message, icon) {
+            const resultsList = document.getElementById("resultsList");
+            resultsList.innerHTML = `
+                <div class="list-group-item text-muted text-center py-5 animate__animated animate__fadeIn">
+                    <i class="bi ${icon} display-6 mb-3" style="color: #dee2e6;"></i>
+                    <h5>${message}</h5>
+                </div>
+            `;
+        }
+        
+        // Helper function to show alerts
+        function showAlert(message, type) {
+            const alert = document.createElement("div");
+            alert.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3 animate__animated animate__fadeInDown`;
+            alert.style.zIndex = "1100";
+            alert.role = "alert";
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            
+            document.body.appendChild(alert);
+            
+            // Auto dismiss after 5 seconds
+            setTimeout(() => {
+                alert.classList.remove("animate__fadeInDown");
+                alert.classList.add("animate__fadeOutUp");
+                setTimeout(() => alert.remove(), 500);
+            }, 5000);
+        }
+        
+        // Hide suggestions when clicking elsewhere
+        document.addEventListener('click', function(e) {
+            if (e.target.id !== 'locationInput') {
+                document.getElementById("suggestions").style.display = "none";
+            }
+        });
+        
+        // Show suggestions when input is focused
+        document.getElementById("locationInput").addEventListener('focus', function() {
+            if (this.value.length >= 3) {
+                autocompleteLocation();
+            }
+        });
+        
+        // Submit search on Enter key
+        document.getElementById("locationInput").addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchByManualInput();
+            }
+        });
+    </script>
+</body>
+</html>
