@@ -1,6 +1,6 @@
 import os
 import cv2
-import numpy as np
+
 from flask import Flask, request, jsonify, render_template
 from werkzeug.utils import secure_filename
 from ultralytics import YOLO
@@ -13,6 +13,7 @@ from pymongo import MongoClient  # For MongoDB
 client = MongoClient("mongodb://localhost:27017/")  # single client
 db = client["ecobuddy_db"]
 complaints_collection = db["complaints"]
+
 
 # ---------- Initialize Flask App ----------
 app = Flask(__name__)
@@ -68,45 +69,51 @@ def upload_file():
     file.save(file_path)
 
     # YOLOv8 Detection
-    results = model(file_path)
-    result = results[0]
+    try:
+        results = model(file_path)
+        result = results[0]
 
-    detections = {}
-    for box in result.boxes.data.tolist():
-        x1, y1, x2, y2, confidence, class_id = box
-        class_name = result.names[int(class_id)]
-        reuse_tip = waste_recommendations.get(class_name, {}).get("reuse", "No suggestion available.")
-        dispose_tip = waste_recommendations.get(class_name, {}).get("dispose", "No disposal info available.")
+        detections = []
+        for box in result.boxes.data.tolist():
+            x1, y1, x2, y2, conf, class_id = box
+            class_name = result.names[int(class_id)]
+            reuse_tip = waste_recommendations.get(class_name, {}).get("reuse", "No suggestion available.")
+            dispose_tip = waste_recommendations.get(class_name, {}).get("dispose", "No disposal info available.")
 
-        if class_name not in detections:
-            detections[class_name] = {"count": 1, "reuse": reuse_tip, "dispose": dispose_tip}
-        else:
-            detections[class_name]["count"] += 1
+            # append to list
+            existing = next((d for d in detections if d['class'] == class_name), None)
+            if existing:
+                existing['count'] += 1
+            else:
+                detections.append({"class": class_name, "count": 1, "reuse": reuse_tip, "dispose": dispose_tip})
 
-    # Base64 Conversion
-    original_image = Image.open(file_path)
-    original_image_base64 = image_to_base64(original_image)
+        # Prepare processed image with bounding boxes
+        processed_image = cv2.imread(file_path)
+        for box in result.boxes.data.tolist():
+            x1, y1, x2, y2, conf, class_id = box
+            class_name = result.names[int(class_id)]
+            color = (0, 255, 0)
+            label = f"{class_name} ({conf:.2f})"
+            cv2.rectangle(processed_image, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
+            cv2.putText(processed_image, label, (int(x1), int(y1)-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-    processed_image = cv2.imread(file_path)
-    for box in result.boxes.data.tolist():
-        x1, y1, x2, y2, confidence, class_id = box
-        class_name = result.names[int(class_id)]
-        color = (0, 255, 0)
-        label = f"{class_name} ({confidence:.2f})"
-        cv2.rectangle(processed_image, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        cv2.putText(processed_image, label, (int(x1), int(y1) - 10), font, 0.5, color, 2)
+        processed_image_path = os.path.join(app.config["UPLOAD_FOLDER"], "processed_" + filename)
+        cv2.imwrite(processed_image_path, processed_image)
 
-    processed_image_path = os.path.join(app.config["UPLOAD_FOLDER"], "processed_" + filename)
-    cv2.imwrite(processed_image_path, processed_image)
-    processed_image_pil = Image.open(processed_image_path)
-    processed_image_base64 = image_to_base64(processed_image_pil)
+        # Convert images to base64
+        original_image_base64 = image_to_base64(Image.open(file_path))
+        processed_image_base64 = image_to_base64(Image.open(processed_image_path))
 
-    return jsonify({
-        "detections": [{"class": key, "count": value["count"], "reuse": value["reuse"], "dispose": value["dispose"]} for key, value in detections.items()],
-        "original_image_url": f"data:image/jpeg;base64,{original_image_base64}",
-        "processed_image_url": f"data:image/jpeg;base64,{processed_image_base64}"
-    })
+        return jsonify({
+            "detections": detections,
+            "original_image_url": f"data:image/jpeg;base64,{original_image_base64}",
+            "processed_image_url": f"data:image/jpeg;base64,{processed_image_base64}"
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 
 # Complaint Reporting Route
 @app.route("/report", methods=["POST"])

@@ -1,0 +1,13 @@
+# Node modules
+node_modules/
+
+# Python virtual environment
+venv/
+pathway_engine/venv/
+
+# Environment variables
+.env
+
+# OS files
+.DS_Store
+Thumbs.db

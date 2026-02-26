@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../OneDrive/Desktop/data science"
+		}
+	],
+    "settings": {
+        "liveServer.settings.multiRootWorkspaceName": "workspace"
+    }
+}
