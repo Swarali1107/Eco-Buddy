@@ -102,7 +102,7 @@ Eco-Buddy/
 
 ⚙️ Installation & Setup
 1️⃣ Clone Repository
-git clone https://github.com/yourusername/Eco-Buddy.git
+git clone https://github.com/Swarali1107/Eco-Buddy.git
 cd Eco-Buddy
 2️⃣ Setup Backend
 cd backend
